@@ -1,0 +1,65 @@
+/*  ********* comman CSS ********* */
+body{
+    margin: 0;
+    padding: 0;
+}
+
+
+/*  ********* userLanding ********* */
+.user-welcome{
+    margin: 5px auto;
+    font-size: 30px;
+}
+
+.user-choice{
+    margin: 2% auto;
+    padding: 1% 2%;
+    border-radius: 1%;
+    background-color: rgb(0,0,0,0.5);
+    width: 30%;
+    text-align: center;
+}
+
+.input-style{
+    margin: auto;
+    width: 60%;
+}
+
+
+/*  ********* Admin ********* */
+.files-list{
+    display: flex;
+    margin: auto;
+    width: 90%;
+
+}
+
+.live-files{
+    margin: 0.5%;
+    padding: 0.5%;
+    border-radius: 5%;
+    background-color: rgb(0,0,0,0.5);
+    width: 15%;
+    text-align: center;
+}
+
+.logout-btn{
+    text-decoration: none;
+    font-size: x-large;
+    color: azure;
+}
+
+/*  ********* login ********* */
+.form-box{
+    text-align: center;
+    width: 40%;
+    margin: 4% auto;
+    padding: 1%;
+    background-color: rgba(0, 0, 0, .5);
+    border-radius: 2%;
+}
+
+
+.data-box{
+    padding: 1%;
+}

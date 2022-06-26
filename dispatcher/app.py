@@ -37,6 +37,27 @@ with app.app_context():
     if not User.hasUsername("sawah"):
         User.insert("sawah","sawah@sawah.com","123456")
 
+class Dispatcher:
+    def __init__(self):
+        self.client_idx = 0
+        self.file_idx = 0
+        self.servers = [["0","http://localhost:5000"],["1","http://localhost:5001"]]
+    
+    def get_client_servers(self, n):
+        servs = []
+        while len(servs)<n:
+            servs.append(self.servers[self.client_idx])
+            self.client_idx = (self.client_idx+1)%len(self.servers)
+        return servs
+
+    def get_file_servers(self, n):
+        servs = []
+        while len(servs)<n:
+            servs.append(self.servers[self.file_idx])
+            self.file_idx = (self.file_idx+1)%len(self.servers)
+        return servs
+
+dispatcher = Dispatcher()
 #####################  routes  #####################
 
 #####  main route  #####
@@ -106,6 +127,48 @@ def get_user():
 def logout():
     session.clear()
     return redirect("/")
+
+@app.route('/create_file', methods=["POST"])
+def create_file():
+    file_id = "f"+str(random.random())[2:]
+    filename = request.form.getlist('newFile')[0]
+    print(file_id)
+    File.insert(session["name"],filename, file_id)
+    server = dispatcher.get_file_servers(1)[0]
+    return render_template("userTextFile.html", username=session["name"], filename=filename, server_id=server[0], server_url=server[1], file_id=file_id)
+
+@app.route('/open_file', methods=["POST"])
+def open_file():
+    filename = request.form.getlist("recentFile")[0]
+    file_id=File.getByFilename(filename).file_id
+    servers = Server.getById(file_id)
+    server = dispatcher.get_client_servers(1)[0]
+    return render_template("userTextFile.html", username=session["name"], filename=filename, server_id=server[0], server_url=server[1], file_id=file_id)
+
+@app.route('/add_file', methods=["POST"])
+def add_file():
+    filename = request.form.getlist("joinFile")[0]
+    file_id=File.getByFilename(filename).file_id
+    if File.hasId(file_id):
+        File.insert(session["name"], filename, file_id)
+        servers = Server.getById(file_id)  # can cause bugs
+        server = servers[random.randint(0,len(servers)-1)]
+        return render_template("userTextFile.html", username=session["name"], filename=filename, server_id=server[0], server_url=server[1], file_id=file_id)
+    return "File not found"
+
+@app.route('/notify', methods=["POST"])
+def notify():
+    file_id = request.json["file_id"]
+    server_id = request.json["server_id"]
+    server_url = request.json["server_url"]
+    Server.insert(file_id, server_id, server_url)
+
+    return "Success", 200
+
+@app.route('/get_servers', methods=["POST"])
+def get_servers_route():
+    return json.dumps(dispatcher.get_file_servers(2))
+
 #####  404 page  #####
 @app.errorhandler(404)
 def error_404(e):
