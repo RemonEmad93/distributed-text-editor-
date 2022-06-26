@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test page</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+</head>
+<body>
+    <form action="/post_test" method="post">
+        <textarea name="tst" id="main_text" cols="205" rows="40"></textarea>
+    </form>
+    <script src="../static/diff_match_patch.js"></script>
+    <script>
+        function handle_change(){
+            var text = document.getElementById("main_text").value;
+            var updates = synch.send_updates(text);
+            socket.emit('update', JSON.stringify(updates));
+            setTimeout(handle_change, 500);
+        }
+
+
+        var dmp = new diff_match_patch();
+        var socket = io();
+        var file_id = "i"+{{data.temp_id}};
+        var synch;
+        socket.on('connect',function(msg){
+            var to_send = {"file_id":file_id,"conn_id":"client id"};
+            socket.emit("req_text",JSON.stringify(to_send));
+        });
+
+        socket.on("res_text", function(msg){
+            document.getElementById("main_text").value = msg;
+            synch = new diff_sync(msg);
+            handle_change();
+        });
+
+        socket.on('res_update',function(msg){
+            var text = document.getElementById("main_text").value;
+            var new_text = synch.recieve_updates(JSON.parse(msg), text);
+            document.getElementById('main_text').value = new_text;
+        });
+        window.onbeforeunload = function(){
+            socket.disconnect();
+        }
+        
+        class diff_sync{
+            constructor(text){
+                this.shadow_text = text;
+                this.backup_text = text;
+                this.own_version = 0;
+                this.other_version = 0;
+                this.backup_version = 0;
+                this.edit_stack = [];
+            }
+            recieve_updates(updates, text){
+                var edit_stack = updates[0];
+                var last_version = updates[1];
+                if (last_version < this.own_version){
+                    this.shadow_text = this.backup_text;
+                }
+                
+                var new_shadow_text = this.shadow_text;
+                var max_version = this.other_version;
+                for(var i = 0; i < edit_stack.length; i++){
+                    var patch_text = edit_stack[i][0];
+                    var patch_version = edit_stack[i][1];
+                    if (patch_version >= this.other_version){
+                        var patches = dmp.patch_fromText(patch_text);
+                        text = dmp.patch_apply(patches, text)[0];
+                        new_shadow_text = dmp.patch_apply(patches, new_shadow_text)[0];
+                        if(patch_version > max_version){ max_version = patch_version;}
+                    }
+                }
+                this.other_version += 1;
+                this.edit_stack = [];
+
+                this.shadow_text = new_shadow_text;
+                this.backup_text = this.shadow_text;
+                return text;
+            }
+            send_updates(text){
+                var patches = dmp.patch_make(this.shadow_text, text);
+                var diff = dmp.patch_toText(patches);
+                this.edit_stack.push([diff, this.own_version]);
+                this.shadow_text = text;
+                this.own_version += 1;
+                return [this.edit_stack, this.other_version];
+            }
+        }
+
+    </script>
+
+
+
+
+</body>
+</html>

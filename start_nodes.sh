@@ -1,0 +1,1 @@
+python ./server_node/app.py 0 http://localhost 5000 & python ./server_node/app.py 1 http://localhost 5001 & python ./dispatcher/app.py
